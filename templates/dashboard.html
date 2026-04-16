@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+
+<h1 class="text-3xl font-bold mb-6">Dashboard</h1>
+
+<div class="grid grid-cols-4 gap-4 mb-6">
+<div class="bg-white p-4 rounded shadow">Ingresos<br><b>${{ total_ingresos }}</b></div>
+<div class="bg-white p-4 rounded shadow">Gastos<br><b>${{ total_gastos }}</b></div>
+<div class="bg-white p-4 rounded shadow">Sueldos<br><b>${{ total_sueldos }}</b></div>
+<div class="bg-white p-4 rounded shadow">Utilidad<br><b>${{ total_utilidad }}</b></div>
+</div>
+
+<form method="POST" action="/agregar" class="bg-white p-4 rounded shadow mb-6 grid grid-cols-2 gap-4">
+<input type="date" name="fecha" required class="border p-2">
+<input type="text" name="empleado" placeholder="Empleado" required class="border p-2">
+
+<div id="talonarios" class="col-span-2 space-y-2">
+<div class="grid grid-cols-3 gap-2">
+<input name="inicio[]" placeholder="Inicio" class="border p-2">
+<input name="fin[]" placeholder="Fin" class="border p-2">
+<input name="monto[]" placeholder="Monto" class="border p-2">
+</div>
+</div>
+
+<button type="button" onclick="add()" class="bg-green-500 text-white p-2">+ Talonario</button>
+
+<input name="gastos" placeholder="Gastos" class="border p-2">
+<input name="sueldos" placeholder="Sueldos" class="border p-2">
+
+<textarea name="desc_gastos" placeholder="Descripción gastos" class="border p-2 col-span-2"></textarea>
+<textarea name="desc_sueldos" placeholder="Descripción sueldos" class="border p-2 col-span-2"></textarea>
+
+<button class="bg-blue-500 text-white p-2 col-span-2">Guardar</button>
+</form>
+
+<table class="w-full bg-white rounded shadow">
+<tr class="bg-gray-200">
+<th>Fecha</th><th>Empleado</th><th>Total</th><th>Acciones</th>
+</tr>
+{% for r in registros %}
+<tr class="text-center border-t">
+<td>{{ r['fecha'] }}</td>
+<td>{{ r['empleado'] }}</td>
+<td>${{ r['total_final'] }}</td>
+<td class="space-x-2">
+<a href="/reporte/{{ r['id'] }}" class="text-blue-500">Ver</a>
+<a href="/editar/{{ r['id'] }}" class="text-yellow-500">Editar</a>
+<a href="/eliminar/{{ r['id'] }}" class="text-red-500">Eliminar</a>
+</td>
+</tr>
+{% endfor %}
+</table>
+
+<script>
+function add(){
+let d=document.createElement('div');
+d.className='grid grid-cols-3 gap-2';
+d.innerHTML=`<input name="inicio[]" class="border p-2"><input name="fin[]" class="border p-2"><input name="monto[]" class="border p-2">`;
+document.getElementById('talonarios').appendChild(d);
+}
+</script>
+
+</body>
+</html>

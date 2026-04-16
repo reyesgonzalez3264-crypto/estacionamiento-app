@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Control Estacionamiento</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+
+<h1 class="text-3xl font-bold mb-4">Registro Diario</h1>
+
+<form method="POST" action="/agregar" class="bg-white p-4 rounded shadow space-y-4">
+
+    <input type="date" name="fecha" required class="border p-2 w-full">
+    <input type="text" name="empleado" placeholder="Empleado" required class="border p-2 w-full">
+
+    <h2 class="font-bold">Talonarios</h2>
+
+    <div id="talonarios">
+        <div class="grid grid-cols-3 gap-2 mb-2">
+            <input type="number" name="folio_inicio[]" placeholder="Inicio" class="border p-2">
+            <input type="number" name="folio_fin[]" placeholder="Fin" class="border p-2">
+            <input type="number" step="0.01" name="monto[]" placeholder="Dinero generado" class="border p-2">
+        </div>
+    </div>
+
+    <button type="button" onclick="agregarTalonario()" class="bg-green-500 text-white px-3 py-1 rounded">
+        + Agregar talonario
+    </button>
+
+    <input type="number" step="0.01" name="gastos" placeholder="Gastos" class="border p-2 w-full">
+    <input type="number" step="0.01" name="sueldos" placeholder="Sueldos" class="border p-2 w-full">
+
+    <button class="bg-blue-500 text-white p-2 w-full rounded">Guardar</button>
+</form>
+
+</body>
+</html>

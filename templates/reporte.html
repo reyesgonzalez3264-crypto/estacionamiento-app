@@ -1,0 +1,9 @@
+<h2>Reporte</h2>
+<p>{{ r['fecha'] }} - {{ r['empleado'] }}</p>
+<ul>
+{% for t in talonarios %}
+<li>{{ t['inicio'] }} - {{ t['fin'] }} = ${{ t['monto'] }}</li>
+{% endfor %}
+</ul>
+<p>Total: ${{ r['total_final'] }}</p>
+<button onclick="window.print()">Imprimir</button>
