@@ -1,25 +1,24 @@
-# =========================================
-# SISTEMA MEJORADO (UI + EDITAR + ELIMINAR)
-# =========================================
-
 from flask import Flask, render_template, request, redirect, url_for
-import sqlite3
+import psycopg2
+import psycopg2.extras
+import os
 
 app = Flask(__name__)
 
 # ---------------- DB ----------------
 def get_db():
-    conn = sqlite3.connect('estacionamiento.db')
-    conn.row_factory = sqlite3.Row
+    DATABASE_URL = os.environ.get("DATABASE_URL")
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
 # ---------------- INIT ----------------
 def init_db():
     conn = get_db()
+    cursor = conn.cursor()
 
-    conn.execute('''
+    cursor.execute('''
     CREATE TABLE IF NOT EXISTS registros (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         fecha TEXT,
         empleado TEXT,
         total_ingresado REAL,
@@ -31,9 +30,9 @@ def init_db():
     )
     ''')
 
-    conn.execute('''
+    cursor.execute('''
     CREATE TABLE IF NOT EXISTS talonarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         registro_id INTEGER,
         inicio INTEGER,
         fin INTEGER,
@@ -50,12 +49,15 @@ init_db()
 @app.route('/')
 def dashboard():
     conn = get_db()
-    registros = conn.execute("SELECT * FROM registros ORDER BY fecha DESC").fetchall()
+    cursor = conn.cursor()
 
-    total_ingresos = sum([r['total_ingresado'] for r in registros])
-    total_gastos = sum([r['gastos'] for r in registros])
-    total_sueldos = sum([r['sueldos'] for r in registros])
-    total_utilidad = sum([r['total_final'] for r in registros])
+    cursor.execute("SELECT * FROM registros ORDER BY fecha DESC")
+    registros = cursor.fetchall()
+
+    total_ingresos = sum([r['total_ingresado'] or 0 for r in registros])
+    total_gastos = sum([r['gastos'] or 0 for r in registros])
+    total_sueldos = sum([r['sueldos'] or 0 for r in registros])
+    total_utilidad = sum([r['total_final'] or 0 for r in registros])
 
     conn.close()
 
@@ -86,10 +88,11 @@ def agregar():
 
     cursor.execute('''
     INSERT INTO registros (fecha, empleado, total_ingresado, gastos, desc_gastos, sueldos, desc_sueldos, total_final)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    RETURNING id
     ''', (fecha, empleado, 0, gastos, desc_gastos, sueldos, desc_sueldos, 0))
 
-    registro_id = cursor.lastrowid
+    registro_id = cursor.fetchone()['id']
 
     for i, f, m in zip(inicios, fines, montos):
         if i and f and m:
@@ -100,13 +103,13 @@ def agregar():
 
             cursor.execute('''
             INSERT INTO talonarios (registro_id, inicio, fin, monto)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
             ''', (registro_id, i, f, m))
 
     total_final = total_ingresado - (gastos + sueldos)
 
     cursor.execute('''
-    UPDATE registros SET total_ingresado=?, total_final=? WHERE id=?
+    UPDATE registros SET total_ingresado=%s, total_final=%s WHERE id=%s
     ''', (total_ingresado, total_final, registro_id))
 
     conn.commit()
@@ -118,8 +121,11 @@ def agregar():
 @app.route('/eliminar/<int:id>')
 def eliminar(id):
     conn = get_db()
-    conn.execute("DELETE FROM talonarios WHERE registro_id=?", (id,))
-    conn.execute("DELETE FROM registros WHERE id=?", (id,))
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM talonarios WHERE registro_id=%s", (id,))
+    cursor.execute("DELETE FROM registros WHERE id=%s", (id,))
+
     conn.commit()
     conn.close()
     return redirect(url_for('dashboard'))
@@ -128,6 +134,7 @@ def eliminar(id):
 @app.route('/editar/<int:id>', methods=['GET','POST'])
 def editar(id):
     conn = get_db()
+    cursor = conn.cursor()
 
     if request.method == 'POST':
         fecha = request.form['fecha']
@@ -135,13 +142,17 @@ def editar(id):
         gastos = float(request.form.get('gastos') or 0)
         sueldos = float(request.form.get('sueldos') or 0)
 
-        conn.execute("UPDATE registros SET fecha=?, empleado=?, gastos=?, sueldos=? WHERE id=?",
-                     (fecha, empleado, gastos, sueldos, id))
+        cursor.execute("""
+        UPDATE registros SET fecha=%s, empleado=%s, gastos=%s, sueldos=%s WHERE id=%s
+        """, (fecha, empleado, gastos, sueldos, id))
+
         conn.commit()
         conn.close()
         return redirect(url_for('dashboard'))
 
-    registro = conn.execute("SELECT * FROM registros WHERE id=?", (id,)).fetchone()
+    cursor.execute("SELECT * FROM registros WHERE id=%s", (id,))
+    registro = cursor.fetchone()
+
     conn.close()
     return render_template('editar.html', r=registro)
 
@@ -149,8 +160,14 @@ def editar(id):
 @app.route('/reporte/<int:id>')
 def reporte(id):
     conn = get_db()
-    registro = conn.execute("SELECT * FROM registros WHERE id=?", (id,)).fetchone()
-    talonarios = conn.execute("SELECT * FROM talonarios WHERE registro_id=?", (id,)).fetchall()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM registros WHERE id=%s", (id,))
+    registro = cursor.fetchone()
+
+    cursor.execute("SELECT * FROM talonarios WHERE registro_id=%s", (id,))
+    talonarios = cursor.fetchall()
+
     conn.close()
     return render_template('reporte.html', r=registro, talonarios=talonarios)
 
