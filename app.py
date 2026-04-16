@@ -16,8 +16,11 @@ def init_db():
     conn = get_db()
     cursor = conn.cursor()
 
+    cursor.execute("DROP TABLE IF EXISTS talonarios")
+    cursor.execute("DROP TABLE IF EXISTS registros")
+
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS registros (
+    CREATE TABLE registros (
         id SERIAL PRIMARY KEY,
         fecha TEXT,
         empleado TEXT,
@@ -31,7 +34,7 @@ def init_db():
     ''')
 
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS talonarios (
+    CREATE TABLE talonarios (
         id SERIAL PRIMARY KEY,
         registro_id INTEGER,
         inicio INTEGER,
